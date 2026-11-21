@@ -1,1 +1,261 @@
+  
+import random
+import re
+import time
+
+
+def normalise(phone):
+    """Keep digits only and use the last 10 digits."""
+    digits = re.sub(r"\D", "", phone or "")
+    return digits[-10:] if len(digits) >= 10 else None
+
+
+def merge_contacts(contacts):
+    merged, unmatched = {}, []
+
+    for c in contacts:
+        key = normalise(c.get("phone"))
+
+        if key is None:
+            unmatched.append(c)
+            continue
+
+        entry = merged.setdefault(
+            key,
+            {"phone": key, "names": set(), "emails": set()}
+        )
+
+        if c.get("name"):
+            entry["names"].add(c["name"].strip())
+
+        if c.get("email"):
+            entry["emails"].add(c["email"].strip().lower())
+
+    return merged, unmatched
+
+
+def merge_pairwise(contacts):
+    """Compare every pair of contacts."""
+    keys = [normalise(c.get("phone")) for c in contacts]
+    label = list(range(len(contacts)))
+
+    for i in range(len(contacts)):
+        if keys[i] is None:
+            continue
+
+        for j in range(i + 1, len(contacts)):
+            if keys[j] == keys[i]:
+                label[j] = label[i]
+
+    return len({
+        label[i]
+        for i in range(len(contacts))
+        if keys[i] is not None
+    })
+
+
+# Small list, merged by hand
+small = [
+    {"name": "Ravi Kumar", "phone": "+91 98400-12345", "email": "ravi@x.com"},
+    {"name": "Ravi K.", "phone": "098400 12345", "email": "RAVI@x.com"},
+    {"name": "Ravi Kumar", "phone": "9941100200", "email": None},
+    {"name": "Meena", "phone": None, "email": "meena@x.com"},
+    {"name": "Meena S", "phone": "(984) 001-2345", "email": None},
+    {"name": "Ravi Kumar", "phone": "9840012345", "email": "ravi@x.com"},
+    {"name": None, "phone": "99411 00200", "email": None}
+]
+
+
+merged, unmatched = merge_contacts(small)
+
+for key, e in merged.items():
+    print(
+        key,
+        "| names:", sorted(e["names"]),
+        "| emails:", sorted(e["emails"])
+    )
+
+print(
+    "unmatched (no usable phone):",
+    [c["name"] for c in unmatched]
+)
+
+
+assert set(merged) == {"9840012345", "9941100200"}
+assert len(unmatched) == 1
+
+assert merged["9840012345"]["names"] == {
+    "Ravi Kumar", "Ravi K.", "Meena S"
+}
+
+assert merged["9941100200"]["names"] == {"Ravi Kumar"}
+
+print(
+    "hand-merged result confirmed: "
+    "7 contacts -> 2 merged people + 1 unmatched"
+)
+
+
+# Timing test
+def make(n):
+    pool = [
+        str(random.randrange(7_000_000_000, 10_000_000_000))
+        for _ in range(int(n * 0.8))
+    ]
+
+    fmts = [
+        lambda p: p,
+        lambda p: "+91 " + p[:5] + " " + p[5:],
+        lambda p: "0" + p,
+        lambda p: p[:5] + "-" + p[5:]
+    ]
+
+    return [
+        {
+            "name": f"Person {i}",
+            "phone": random.choice(fmts)(random.choice(pool)),
+            "email": None
+        }
+        for i in range(n)
+    ]
+
+
+random.seed(11)
+
+print("\n-- dictionary grouping --")
+
+for n in (1000, 100_000):
+    data = make(n)
+
+    t0 = time.perf_counter()
+    m, u = merge_contacts(data)
+    td = (time.perf_counter() - t0) * 1000
+
+    print(
+        f"n={n:>7}: {td:8.2f} ms "
+        f"-> {len(m)} distinct numbers"
+    )
+
+
+print("\n-- pairwise comparison --")
+
+pw = {}
+
+for n in (1000, 2000, 4000):
+    data = make(n)
+
+    t0 = time.perf_counter()
+    groups = merge_pairwise(data)
+
+    pw[n] = (time.perf_counter() - t0) * 1000
+
+    print(
+        f"n={n:>7}: {pw[n]:9.2f} ms "
+        f"-> {groups} distinct numbers"
+    )
+
+
+est = pw[4000] * (100_000 / 4000) ** 2
+
+print(
+    f"Extrapolated for n=100,000: "
+    f"{est / 1000:,.0f} seconds "
+    f"= {est / 60000:.1f} minutes"
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
